@@ -1,5 +1,6 @@
 *.mp3
 *.txt
+*.done
 .DS_Store
 bin/
 lib/
