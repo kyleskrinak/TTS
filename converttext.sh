@@ -1,20 +1,44 @@
 #!/bin/zsh
 
-if [ -z "$VIRTUAL_ENV" ]; then
-  echo "❌ Python virtual environment not activated."
-  echo "👉 Run: source bin/activate"
+## Determine Python interpreter explicitly (prefer local venv installation)
+if [ -x "./venv/bin/python" ]; then
+  PYTHON="./venv/bin/python"
+elif [ -x "./bin/python" ]; then
+  PYTHON="./bin/python"
+elif [ -n "$VIRTUAL_ENV" ]; then
+  # venv is already activated, use the python from the activated env
+  PYTHON="python3"
+else
+  echo "❌ Python virtual environment not activated and no local venv found."
+  echo "👉 Either activate the venv: source venv/bin/activate"
+  echo "👉 Or run with explicit interpreter: ./venv/bin/python mac-tts.py"
   exit 1
 fi
 
 echo "Running in $0 using shell $SHELL"
 
 max_jobs=3
-array=(*.txt)
+array=( *.txt(N) )
+
+# Filter out non-content text files (README, requirements, .done files)
+filtered=()
+for f in "${array[@]}"; do
+  case "$f" in
+    requirements.txt|README*|*.done) continue;;
+    *) filtered+=("$f") ;;
+  esac
+done
+array=("${filtered[@]}")
+
+if [ ${#array[@]} -eq 0 ]; then
+  echo "No .txt files to process. (Filtered out README, requirements.txt, and .done files)"
+  exit 0
+fi
 pids=()
 
 for i in "${array[@]}"; do
   echo "Processing $i"
-  python3 mac-tts.py "$i" &  # Run the job in the background
+  "$PYTHON" mac-tts.py "$i" &  # Run the job in the background using explicit interpreter
   pids+=($!)  # Store the PID of the background job
 
   # Check if we have reached the max_jobs limit
